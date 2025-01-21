@@ -1,0 +1,17 @@
+{
+  "name": "back2nd",
+  "version": "1.0.0",
+  "description": "a backend for first time",
+  "keywords": [
+    "js",
+    "backend",
+    "first"
+  ],
+  "license": "ISC",
+  "author": "Aniket",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
