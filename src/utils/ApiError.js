@@ -21,5 +21,7 @@ class ApiError extends Error{
         
         
     }
+//     super(message) sets the message property in the parent Error class.
+// this.statusCode and other properties are custom properties that we add to enhance the error.
 }
 export {ApiError};

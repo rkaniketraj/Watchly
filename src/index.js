@@ -9,6 +9,7 @@
 
 import dotenv from "dotenv"
 import connectDB from "./db/index.js";
+import {app} from './app.js'
 
 dotenv.config({
     path:'./env'
@@ -30,5 +31,5 @@ connectDB()
     // This ensures that the Express server (app.listen) only starts listening for incoming requests after the database connection is successfully established.
 })
 .catch((err)=>{
-    console.log("MongoDb connection failed ...",ErrorEvent)
+    console.log("MongoDb connection failed ...",err)
 })
