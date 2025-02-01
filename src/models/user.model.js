@@ -28,7 +28,7 @@ const userSchema= new Schema(
         },
         watchHistory:[
             {
-                type:Schema.Type.ObjectId,
+                type:Schema.Types.ObjectId,
                 ref:"Video"
             }
         
@@ -44,7 +44,7 @@ const userSchema= new Schema(
 
     }
     ,{
-        timesatmps:true
+        timestamps:true
     }
 )
 //event are save delete and more pre mean before doin this do this
@@ -52,7 +52,7 @@ const userSchema= new Schema(
 //this.isModified is use to when pssw only modifed then dycrpt
 userSchema.pre("save", async function(next){
     if(!this.isModified("password"))return next();
-    this.password=await bcrypt.hash(this.password,10)
+    this.password= await bcrypt.hash(this.password,10)
     next()
 })
 //we design coustom method 
@@ -61,6 +61,9 @@ userSchema.pre("save", async function(next){
 userSchema.method.isPasswordCorrect=async function(password){
   return  await bcrypt.compare(password,this.password)
 }
+// User logs in → Gets Access Token (15 min) & Refresh Token (7 days).
+// When Access Token expires, the user sends the Refresh Token to get a new Access Token.
+// The user does not need to log in again unless the Refresh Token also expires.
 userSchema.method.generateAccessToken=function(){
     return jwt.sign(
         {
