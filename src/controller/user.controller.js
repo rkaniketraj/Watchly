@@ -3,6 +3,29 @@ import {ApiError} from "../utils/ApiError.js";
 import {User} from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken";
+
+//gernerating method as it required multipe time
+const generateAccessAndRefereshTokens=async(userId)=>{
+    try{
+        const user=await User.findById(userId)
+        const accessToken=user.generateAccessToken();
+        const refreshToken=user.generateRefreshToken();
+
+        user.refreshToken=refreshToken;
+         // add but havent save the user
+         //when save is instiialised monfoose model get kickedmin then as model of user cintain password reqired abd we just giving it refresh token then throw an eroro
+        await  user.save({validateBeforeSave: false})
+
+        return {accessToken,refreshToken}
+
+
+
+
+    }catch{
+        throw new ApiError(500,"something wronge while generating ref and acc token")
+    }
+}
 
 const registerUser = asyncHandler( async (req, res) => {
      //get user detail from frontend
@@ -93,9 +116,92 @@ const registerUser = asyncHandler( async (req, res) => {
 
 });
 
+const loginUser=asyncHandler(async(req,res)=>{
+    // req body ->data
+    //username or email
+    //find the user 
+    //password check
+    //accesss and refresh token
+    //send cookie
+
+    const {email,username,password}=req.body;
+    if(!username&&!email){
+        throw new ApiError(400,"username or password is required")
+    }
+    const user=await User.findOne({
+        $or:[
+            {username},
+            {email}
+        ]
+        //find the user basis of username or email if any find then it give that user
+    })
+    if(!user){
+        throw new ApiError(404,"User not found");
+    }
+    //user is in data base User(mongodb object) a user from it 
+    const isPasswordValid=await user.isPasswordCorrect(password);
+
+    if(!isPasswordValid){
+        throw new ApiError(401,"Wronge Password");
+    }
+
+    const {accessToken,refreshToken}=await generateAccessAndRefereshTokens(user._id)
+    // we have updated the refresh token in user by upper step but user is actually pointing to previous user even now
+    // so he havnt refreh token so we have to find again for this user_id (optional step)
+    const loggedInUser=await User.findById(user_id).select("-password -refreshToken")
+
+    //by doing this cookie only can be modified by server not by frontend
+    const options={
+        httpOnly : true,
+        secure : true
+    }
+    return res
+    .status(200)
+    .cookie("accesstoken",accessToken,options)
+    .cookie("refreshtoken",refreshToken,options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user: loggedInUser,accessToken,refreshToken
+            },
+            "user logged in successfully"
+
+        )
+    )
+
+});
+//.cookie is acces by bcz app.use(cookie-parsor)
+
+const logoutUser=asyncHandler(async(req,res)=>{
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+
+        },
+        {
+            new : true
+        }
+    )
+    const options={
+        httpOnly : true,
+        secure : true
+    }
+    return res.
+    status(200)
+    .clearCookie("accessToken",option)
+    .clearCookie("refreshToken",option)
+    .json(new ApiResponse(200,{},"usser logged Out"))
+
+
+})
 
 
 
 export {registerUser,
-    loginUser
+    loginUser,
+    logoutUser
 };
