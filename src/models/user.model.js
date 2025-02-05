@@ -40,6 +40,8 @@ const userSchema= new Schema(
         refreshToken :{
             type: String
         }
+        //we store refreshtoken in database laso to match
+        // // while not store acess token becuse it transfer to cookie of user 
 
 
     }
