@@ -385,6 +385,97 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
 })
 
 
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
+    const {username}=req.params;
+
+    if(!username?.trim){
+        throw new ApiError(400,"username is missing");
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+            }
+            //hat it does: Finds the user with the given username.
+            //What it returns: A dataset containing only that user's document.
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+            //this  store a rray tempory so only first elament have firther  detail like this expale
+            // [
+            //     {
+            //       "_id": 1,
+            //       "username": "john",
+            //       "fullName": "John Doe",
+            //       "subscribers": [
+            //         { "_id": 101, "channel": 1, "subscriber": 2 }
+            //       ],
+            //       "subscribedTo": [
+            //         { "_id": 102, "channel": 2, "subscriber": 1 }
+            //       ]
+            //     }
+            //   ]
+              
+            // You can modify the User schema to store subscribers and subscribedTo as arrays.
+            //Then, run aggregation periodically and update the user document.
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        //in id find in subscribers array ke subsercriber mai hai ya nhi
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+
+            }
+        }
+    ])
+
+    if (!channel?.length) {
+        throw new ApiError(404, "channel does not exists")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, channel[0], "User channel fetched successfully")
+    )
+})
 
 
 
@@ -395,6 +486,7 @@ export {registerUser,
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetail,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile
 
 };
