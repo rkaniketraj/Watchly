@@ -476,6 +476,68 @@ const getUserChannelProfile=asyncHandler(async(req,res)=>{
         new ApiResponse(200, channel[0], "User channel fetched successfully")
     )
 })
+// Yes, watchHistory in the User model already contains the _ids of the videos the user has watched. The aggregation pipeline is used to fetch the full 
+// details of those videos from the videos collection and also populate the owner field with selected details from the users collection.
+
+const getWatchHistory=asyncHandler(async(req,res)=>{
+    const user=await User.aggregate([
+        {
+            $match :{
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup :{
+                from :"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHistory",
+                pipeline:[
+                    {
+                        $lookup :{
+                            from : "users",
+                            localField: "owner",
+                            foreignField:"_id",
+                            as:"owener",
+                            //The $lookup first retrieves all matching documents from the users collection.
+                            // The pipeline inside $lookup processes the fetched users documents before they are merged into the main query.
+                            // This is why $project is included inside the pipeline—it ensures that only the required fields (fullName, username, avatar) are included before merging into the main result.
+
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullName:1,
+                                        username: 1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        }
+                        
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first:"$owner",
+                            }
+                        }
+                    }
+                ]
+            }
+
+        }
+    ])
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "watch history feteched successfully"
+        )
+    )
+})
 
 
 
@@ -487,6 +549,7 @@ export {registerUser,
     getCurrentUser,
     updateAccountDetail,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 
 };
