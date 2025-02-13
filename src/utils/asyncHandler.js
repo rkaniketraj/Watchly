@@ -1,4 +1,4 @@
-//  const asyncHandler =(func)=>async(req,resizeBy,next)=>{
+//  const asyncHandler =(func)=>async(req,res,next)=>{
 //     try{
 //         await func(req,res,next)
 //     }

@@ -2,7 +2,7 @@ class ApiError extends Error{
     constructor(
         statusCode,
         message="something went wronge",
-         errors = [],
+        errors = [],
         stack = ""
     ){
         super(message)
@@ -17,9 +17,7 @@ class ApiError extends Error{
         } else{
             Error.captureStackTrace(this, this.constructor)
         }
-        
-        
-        
+      
     }
 //     super(message) sets the message property in the parent Error class.
 // this.statusCode and other properties are custom properties that we add to enhance the error.

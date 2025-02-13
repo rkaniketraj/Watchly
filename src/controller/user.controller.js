@@ -74,7 +74,7 @@ const registerUser = asyncHandler( async (req, res) => {
     //const coverLocalPath=req.files?.coverImage[0]?.path;
     // showing error if cover image is not uploaded in uppercode so use classical way
     let coverLocalPath;
-    if(req.files&&Array.isArray(req.files.coverImage)&&req.files.coverImage,length>0){
+    if(req.files&&Array.isArray(req.files.coverImage)&&req.files.coverImage.length>0){
         coverLocalPath=req.files.coverImage[0].path;
     }
     if(!avatarLocalPath){
@@ -548,6 +548,7 @@ export {registerUser,
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetail,
+    updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
     getWatchHistory

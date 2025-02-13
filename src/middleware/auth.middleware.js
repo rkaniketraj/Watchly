@@ -30,3 +30,22 @@ export const  verifyJWT=asyncHandler(async(req,res,next)=>{
     }
     
 })
+//  Suppose a request is made with an invalid token.
+
+// 1️⃣ Inside your function:
+
+// jwt.verify(token, process.env.ACCESS_TOKEN_SECRET) throws an error.
+// catch (error) { throw new ApiError(401, "Invalid access token"); } runs.
+// The function throws an ApiError.
+
+// 2️⃣ Inside asyncHandler:
+
+// The function is wrapped inside Promise.resolve().
+// Since it throws an error, the promise is rejected.
+// .catch((err) => next(err)) catches the error and forwards it to Express
+
+// Your function’s catch (error) acts first and transforms the error.
+// ✅ Then, asyncHandler catches that thrown error and sends it to Express for handling.
+
+// Without asyncHandler, Express wouldn’t catch the error properly.
+// You would have to manually wrap all async functions in try-catch, which is inefficient.
