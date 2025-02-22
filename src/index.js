@@ -1,5 +1,5 @@
 //import mongoose from "mongoose"
-//require('dotenv').config({path:'./env'})
+// require('dotenv').config({path:'./env'})
 
 
 //this dot env ganda lag rja reuire use karna import ke  upar
@@ -32,4 +32,4 @@ connectDB()
 })
 .catch((err)=>{
     console.log("MongoDb connection failed ...",err)
-})
+}) 

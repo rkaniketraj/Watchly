@@ -4,6 +4,10 @@ import {User} from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import mongoose from "mongoose";    
+import fs from 'fs';
+//bug failuer in register file still uploaded in loacl host server and never will delete 
 
 //import {}
 
@@ -15,9 +19,12 @@ const generateAccessAndRefereshTokens=async(userId)=>{
         const refreshToken=user.generateRefreshToken();
 
         user.refreshToken=refreshToken;
+        user.markModified("refreshToken"); 
          // add but havent save the user
          //when save is instiialised monfoose model get kickedmin then as model of user cintain password reqired abd we just giving it refresh token then throw an eroro
         await  user.save({validateBeforeSave: false})
+       // await user.reload();
+        
 
         return {accessToken,refreshToken}
 
@@ -58,7 +65,7 @@ const registerUser = asyncHandler( async (req, res) => {
     })){
         throw new ApiError(400,"all fields are required ");
     }
-
+    //console.log("password:000" ,password);
     const exitedUser= await User.findOne({
         $or:[
             {username},
@@ -67,6 +74,7 @@ const registerUser = asyncHandler( async (req, res) => {
         ]
     })
     if(exitedUser){
+     
         throw new ApiError(409,"User already exists");
     }
     //res.body is given by express 
@@ -76,7 +84,7 @@ const registerUser = asyncHandler( async (req, res) => {
     //const coverLocalPath=req.files?.coverImage[0]?.path;
     // showing error if cover image is not uploaded in uppercode so use classical way
     let coverLocalPath;
-    if(req.files&&Array.isArray(req.files.coverImage)&&req.files.coverImage,length>0){
+    if(req.files&&Array.isArray(req.files.coverImage)&&req.files.coverImage.length>0){
         coverLocalPath=req.files.coverImage[0].path;
     }
     if(!avatarLocalPath){
@@ -85,11 +93,11 @@ const registerUser = asyncHandler( async (req, res) => {
     
     const avatar=await uploadOnCloudinary(avatarLocalPath);
     const coverImage=await uploadOnCloudinary(coverLocalPath);
-
+    
     if(!avatar){
         throw new ApiError(500,"Failed to upload avatar image");
     }
-    
+   // console.log("password::::" ,password);
     const user=await User.create({
         fullName,
         avatar:avatar.url,
@@ -98,6 +106,7 @@ const registerUser = asyncHandler( async (req, res) => {
         username:username.toLowerCase(),
         password,
     });
+   // console.log(user);
     //If the variable name matches the model field name, JavaScript automatically maps them (fullName: fullName, email: email, etc.).
 //  For computed values (avatar.url, coverImage?.url, username.toLowerCase()), they are explicitly assigned.
  
@@ -118,6 +127,7 @@ const registerUser = asyncHandler( async (req, res) => {
 
 });
 
+
 const loginUser=asyncHandler(async(req,res)=>{
     // req body ->data
     //username or email
@@ -127,30 +137,58 @@ const loginUser=asyncHandler(async(req,res)=>{
     //send cookie
 
     const {email,username,password}=req.body;
+    
     if(!username&&!email){
-        throw new ApiError(400,"username or password is required")
+        throw new ApiError(400,"username or email is required")
     }
-    const user=await User.findOne({
-        $or:[
-            {username},
-            {email}
+    // console.log("Searching for username:", username);
+    // console.log("Searching for email:", email);
+    
+    const user = await User.findOne({
+        $or: [
+            {
+                username,
+                email
+             
+            }
         ]
-        //find the user basis of username or email if any find then it give that user
-    })
+    }); 
+   // const user =await find
+    
     if(!user){
         throw new ApiError(404,"User not found");
     }
-    //user is in data base User(mongodb object) a user from it 
-    const isPasswordValid=await user.isPasswordCorrect(password);
+   // console.log("Found user:", user);
+    
+    //console.log(user);
 
+    // console.log("Stored Password (Hashed):", user.password);
+    // console.log("Entered Password (Plain):", password);
+    
+    //user is in data base User(mongodb object) a user from it 
+    // console.log(user.isPasswordCorrect(password));
+    
+    const isPasswordValid= await bcrypt.compare(password,user.password);
+   // console.log(" Password Match Result:", isPasswordValid);
     if(!isPasswordValid){
-        throw new ApiError(401,"Wronge Password");
+        throw new ApiError(401,"Wrong Password");
     }
 
     const {accessToken,refreshToken}=await generateAccessAndRefereshTokens(user._id)
+    // const userupdated = await User.findOne({
+    //     $or: [
+    //         {
+    //             username,
+    //             email
+             
+    //         }
+    //     ]
+    // });
+
+    // console.log("refreshTOken",userupdated.refreshToken); 
     // we have updated the refresh token in user by upper step but user is actually pointing to previous user even now
     // so he havnt refreh token so we have to find again for this user_id (optional step)
-    const loggedInUser=await User.findById(user_id).select("-password -refreshToken")
+    const loggedInUser=await User.findById(user._id).select("-password -refreshToken")
 
     //by doing this cookie only can be modified by server not by frontend
     const options={
@@ -159,8 +197,8 @@ const loginUser=asyncHandler(async(req,res)=>{
     }
     return res
     .status(200)
-    .cookie("accesstoken",accessToken,options)
-    .cookie("refreshtoken",refreshToken,options)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refreshToken",refreshToken,options)
     .json(
         new ApiResponse(
             200,
@@ -176,11 +214,12 @@ const loginUser=asyncHandler(async(req,res)=>{
 //.cookie is acces by bcz app.use(cookie-parsor)
 
 const logoutUser=asyncHandler(async(req,res)=>{
+    //console.log(req.body);
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
 
         },
@@ -207,6 +246,7 @@ const logoutUser=asyncHandler(async(req,res)=>{
 // This process continues as long as the user stays active within the refresh token’s expiration period.
 const refreshAccessToken =asyncHandler(async(req,res)=>{
     const incomingRefreshToken= req.cookies.refreshToken || req.body.refreshToken
+    console.log("req.cookies.refreshToken",req.cookies.refreshToken);
  
     if(!incomingRefreshToken){
      throw new ApiError(401,"unauthorised request");
@@ -222,6 +262,7 @@ const refreshAccessToken =asyncHandler(async(req,res)=>{
         if(!user){
             throw new ApiError(401,"invalid refres token")
         }
+       console.log("user",user);
         
         if(incomingRefreshToken!==user?.refreshToken){
             throw new ApiError(401,"refresh token is experied or used")
@@ -238,8 +279,8 @@ const refreshAccessToken =asyncHandler(async(req,res)=>{
     
         return res
         .status(200)
-        .cookies("accessToken",accessToken,option)
-        .cookies("refreshTOken",newRefreshToken,option)
+        .cookie("accessToken",accessToken,option)
+        .cookie("refreshTOken",newRefreshToken,option)
         .json(
             new ApiResponse(
                 200,
@@ -374,7 +415,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
         req.user?._id,
         {
             $set:{
-                avatar: avatar.url
+                avatar: coverImage.url
             }
         },
         {
@@ -525,6 +566,7 @@ export {registerUser,
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetail,
+    updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
     getWatchHistory

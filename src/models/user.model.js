@@ -54,19 +54,20 @@ const userSchema= new Schema(
 //this.isModified is use to when pssw only modifed then dycrpt
 userSchema.pre("save", async function(next){
     if(!this.isModified("password"))return next();
-    this.password=  bcrypt.hash(this.password,10)
+    this.password = await bcrypt.hash(this.password, 20);
     next()
 })
 //we design coustom method 
 
 
-userSchema.method.isPasswordCorrect=async function(password){
+userSchema.methods.isPasswordCorrect=async function(password){
+    console.log("Comparing:", password, "with", this.password);
   return  await bcrypt.compare(password,this.password)
 }
 // User logs in → Gets Access Token (15 min) & Refresh Token (7 days).
 // When Access Token expires, the user sends the Refresh Token to get a new Access Token.
 // The user does not need to log in again unless the Refresh Token also expires.
-userSchema.method.generateAccessToken=function(){
+userSchema.methods.generateAccessToken=function(){
     return jwt.sign(
         {
             _id:this._id,
@@ -82,7 +83,7 @@ userSchema.method.generateAccessToken=function(){
         }
     )
 }
-userSchema.method.generateRefreshToken=function(){
+userSchema.methods.generateRefreshToken=function(){
     return jwt.sign(
         {
             _id:this._id,  
