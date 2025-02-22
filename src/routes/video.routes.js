@@ -36,7 +36,7 @@ router
     .get(getVideoById)
     .delete(deleteVideo)
     .patch(upload.single("thumbnail"), updateVideo);
-
-router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
+    // The .route("/:videoId") binds multiple HTTP methods (GET, DELETE, PATCH) to the same path (/api/videos/:videoId).
+    // Express internally matches the request method and executes the corresponding function.router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
 
 export default router
