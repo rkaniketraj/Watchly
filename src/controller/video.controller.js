@@ -23,6 +23,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
             { description: { $regex: query, $options: "i" } }
         ]
     }
+    //Flexible searches → Finds partial matches (e.g., searching "Node" will match "Node.js").
+// Better user experience → Case-insensitive search ($options: "i").
+// Supports advanced matching → Can match patterns using regex (e.g., ^React for words starting with "React").
 
     if (userId) {
         if (!isValidObjectId(userId)) {
@@ -135,6 +138,9 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 
     const video = await Video.findById(videoId).populate("owner", "fullName username avatar")
+    if(video.isPublished==false&&(video.owner.toString() !== req.user._id.toString()) ){
+        throw new ApiError(400, "video is private");
+    }
 
     if (!video) {
         throw new ApiError(404, "Video not found")
@@ -285,7 +291,8 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     }
 
     video.isPublished = !video.isPublished
-    await video.save()
+
+    await video.save({validateBeforeSave: false});
 
     return res
         .status(200)
