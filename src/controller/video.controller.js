@@ -138,13 +138,13 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 
     const video = await Video.findById(videoId).populate("owner", "fullName username avatar")
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
     if(video.isPublished==false&&(video.owner.toString() !== req.user._id.toString()) ){
         throw new ApiError(400, "video is private");
     }
 
-    if (!video) {
-        throw new ApiError(404, "Video not found")
-    }
 
     return res
         .status(200)
